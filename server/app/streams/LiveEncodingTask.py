@@ -114,6 +114,7 @@ class LiveEncodingTask:
 
         # オプションの入る配列
         options: list[str] = []
+        options.append('-vaapi_device /dev/dri/renderD128 -hwaccel vaapi -hwaccel_output_format vaapi')
 
         # 入力ストリームの解析時間
         analyzeduration = round(500000 + (self._retry_count * 200000))  # リトライ回数に応じて少し増やす
@@ -129,7 +130,9 @@ class LiveEncodingTask:
         # ストリームのマッピング
         ## 音声切り替えのため、主音声・副音声両方をエンコード後の TS に含む
         ## 副音声が検出できない場合にエラーにならないよう、? をつけておく
-        options.append('-map 0:v:0 -map 0:a:0 -map 0:a:1 -map 0:d? -ignore_unknown')
+        # 750Aでは動かなくなるのでコメントアウト
+        #options.append('-map 0:v:0 -map 0:a:0 -map 0:a:1 -map 0:d? -ignore_unknown')
+        options.append('-ignore_unknown')
 
         # フラグ
         ## 主に FFmpeg の起動を高速化するための設定
@@ -141,9 +144,11 @@ class LiveEncodingTask:
         # 映像
         ## コーデック
         if QUALITY[quality].is_hevc is True:
-            options.append('-vcodec libx265')  # H.265/HEVC (通信節約モード)
+            #options.append('-vcodec libx265')  # H.265/HEVC (通信節約モード)
+            options.append('-c:v hevc_vaapi')  # H.265/HEVC (通信節約モード)
         else:
-            options.append('-vcodec libx264')  # H.264
+            #options.append('-vcodec libx264')  # H.264
+            options.append('-c:v h264_vaapi')  # H.264
 
         ## ビットレートと品質
         options.append(f'-flags +cgop -vb {QUALITY[quality].video_bitrate} -maxrate {QUALITY[quality].video_bitrate_max}')
@@ -170,11 +175,13 @@ class LiveEncodingTask:
         ## インターレース解除 (60i → 60p (フレームレート: 60fps))
         if QUALITY[quality].is_60fps is True:
             options.append(f'-r 60000/1001 -g {int(gop_length_second * 60)}')
-            options.append(f'-vf yadif=mode=1:parity=-1:deint=1,scale={video_width}:{video_height}')
+            #options.append(f'-vf yadif=mode=1:parity=-1:deint=1,scale={video_width}:{video_height}')
+            options.append(f'-vf format=nv12|vaapi,hwupload,scale_vaapi=w={video_width}:h={video_height}')
         ## インターレース解除 (60i → 30p (フレームレート: 30fps))
         else:
             options.append(f'-r 30000/1001 -g {int(gop_length_second * 30)}')
-            options.append(f'-vf yadif=mode=0:parity=-1:deint=1,scale={video_width}:{video_height}')
+            #options.append(f'-vf yadif=mode=0:parity=-1:deint=1,scale={video_width}:{video_height}')
+            options.append(f'-vf format=nv12|vaapi,hwupload,scale_vaapi=w={video_width}:h={video_height}')
 
         # 音声
         ## 音声が 5.1ch かどうかに関わらず、ステレオにダウンミックスする
@@ -296,9 +303,11 @@ class LiveEncodingTask:
         # 映像
         ## コーデック
         if QUALITY[quality].is_hevc is True:
-            options.append('--codec hevc')  # H.265/HEVC (通信節約モード)
+            #options.append('--codec hevc')  # H.265/HEVC (通信節約モード)
+            options.append('-c:v hevc_vaapi')  # H.265/HEVC (通信節約モード)
         else:
-            options.append('--codec h264')  # H.264
+            #options.append('--codec h264')  # H.264
+            options.append('-c:v h264_vaapi')  # H.264 hw
 
         ## ビットレート
         ## H.265/HEVC かつ QSVEncC の場合のみ、--qvbr (品質ベース可変ビットレート) モードでエンコードする
