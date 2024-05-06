@@ -75,14 +75,14 @@ export class PlayerUtils {
     /**
      * DPlayer のインスタンスから API で設定できる画質を取得する
      * @param player DPlayer のインスタンス
-     * @returns API で設定できる画質 (取得できなかった場合は基本復旧不能だが、一応 "1080p" を返す)
+     * @returns API で設定できる画質 (取得できなかった場合は基本復旧不能だが、一応 "360p" を返す)
      */
     static extractAPIQualityFromDPlayer(player: DPlayer): APIVideoQuality {
         if (player.quality === null) {
-            return '1080p';
+            return '360p';
         }
         const regex = /streams\/live\/[a-z0-9-]*\/(.*)\/(mpegts|ll-hls)/;
         const match = player.quality.url.match(regex);
-        return match ? (match[1] as APIVideoQuality) : '1080p';
+        return match ? (match[1] as APIVideoQuality) : '360p';
     }
 }
